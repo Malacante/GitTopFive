@@ -1,29 +1,31 @@
-import json
 import sys
 import requests
-from collections import defaultdict
 import operator
 import re
+from tqdm import tqdm
+import time
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    hostname = 'https://api.github.com'
     try:
-        username = sys.argv[0]
-        password = sys.argv[1]
-    except: #user has not specified their github username
-        print("Usage: python GitTopFive.py <username> <password>")
+        token = sys.argv[0]
+    except IndexError: #user has not specified their token
+        print("Usage: python GitTopFive.py <token>")
         quit()
 
     while True:
         org = input("Enter the organization you wish to query or q to quit.\n")
         if org == 'q':
             quit()
+        rrep = requests.get("https://api.github.com/orgs/%s/repos?access_token=%s&per_page=100" % (org, token)) #get all repos by organization
         if rrep.status_code == 443:
             print("Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.")
             quit()
+        if rrep.status_code == 404:
+            print("%s is not a valid organization."%org)
+            continue
         rep = rrep.json()
-        while True:
+        while True: #handles pagination of results
             try:
                 u = rrep.links["next"]["url"]
                 rrep = requests.get(u)
@@ -34,11 +36,10 @@ if __name__=="__main__":
             except KeyError:
                 break
 
-        topFive=[]
-        for project in rep:
+        topFive = []
+        for project in tqdm(rep): #iterate through each project and count the pull requests
             name = project["name"]
-            print("Working on %s" % name)
-            url = "https://api.github.com/repos/%s/%s/pulls?state=all&access_token=65cb1fe8fb137f76629950ba8a692303bfb3b84e&per_page=100" % (org, name)
+            url = "https://api.github.com/repos/%s/%s/pulls?state=all&access_token=%s&per_page=100" % (org, name, token)
             num = 0
 
             r = requests.get(url)
@@ -61,7 +62,6 @@ if __name__=="__main__":
                 pulls = r.json()
                 num = len(pulls)
 
-
             if len(topFive) < 5:
                 topFive.append((name, num))
                 if len(topFive) == 5:
@@ -74,6 +74,7 @@ if __name__=="__main__":
                     topFive.insert(x, (name, num))
                     topFive.pop(-1)
                     break
+        time.sleep(.1) #the progress bar interferes with our results if we try to print them too fast/
         print("Top 5 projects for %s :\n" % org)
         for x, proj in enumerate(topFive):
             print("%s: %d pull request(s)\n" % (proj[0], proj[1]))
