@@ -9,11 +9,11 @@ if __name__ == "__main__":
 
     try:
         token = sys.argv[1]
-    except IndexError: # user has not specified their token
+    except IndexError:  # user has not specified their token
         print("Usage: python GitTopFive.py <token>")
         quit()
 
-    while True:
+    while True:  # run until termination signal is given or a fatal error is encountered
         org = input("Enter the organization you wish to query or q to quit.\n")
         if org == 'q':
             quit()
@@ -50,6 +50,7 @@ if __name__ == "__main__":
                 print("Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.")
                 quit()
             try:
+                # extract number of last page and navigate to it
                 url = r.links["last"]["url"]
                 p = re.compile('&page=\d+')
                 inter = p.search(url).group()
@@ -61,7 +62,7 @@ if __name__ == "__main__":
                     quit()
                 pulls = r.json()
                 num = (pages-1)*100+len(pulls)
-            except KeyError: # only one page of results
+            except KeyError:  # only one page of results
                 pulls = r.json()
                 num = len(pulls)
 
@@ -77,7 +78,9 @@ if __name__ == "__main__":
                     topFive.insert(x, (name, num))
                     topFive.pop(-1)
                     break
-        time.sleep(.1) #the progress bar interferes with our results if we try to print them too fast
+        time.sleep(.1)  # the progress bar interferes with our results if we try to print them too fast - would remove if results weren't for human-readability
+        if len(topFive) < 5:  # make sure orgs with 2-4 repositories are sorted
+            topFive.sort(key=operator.itemgetter(1), reverse=True)
         print("Top 5 projects for %s :\n" % org)
         for x, proj in enumerate(topFive):
             print("%s: %d pull request(s)\n" % (proj[0], proj[1]))
