@@ -18,19 +18,19 @@ class Organization(Resource):
         token= parser.parse_args()['token']
         rrep = requests.get("https://api.github.com/orgs/%s/repos?access_token=%s&per_page=100" % (org, token)) #get all repos by organization
         if rrep.status_code == 443:
-            return "Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.", 443
+            return {"message": "Rate limit exceeded. Please try again in an hour."}, 443
         if rrep.status_code == 404:
-            return "%s is not a valid organization."%org, 404
+            return {"message": "%s is not a valid organization." % org}, 404
 
         if rrep.status_code == 401:
-            return "Your OAuth token is incorrect. Please refer to Readme.txt for instructions on how to generate a token.", 401
+            return {"message": "Your OAuth token is incorrect. Make sure to include the 'token' field in your request."}, 401
         rep = rrep.json()
         while True:  # handles pagination of results
             try:
                 u = rrep.links["next"]["url"]
                 rrep = requests.get(u)
                 if rrep.status_code == 443:
-                    return "Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.", 443
+                    return {"message": "Rate limit exceeded. Please try again in an hour."}, 443
                 rep += rrep.json()
             except KeyError:
                 break
@@ -43,7 +43,7 @@ class Organization(Resource):
 
             r = requests.get(url)
             if r.status_code == 443:
-                return "Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.", 443
+                return {"message": "Rate limit exceeded. Please try again in an hour."}, 443
             try:
                 # extract number of last page and navigate to it
                 url = r.links["last"]["url"]
@@ -53,7 +53,7 @@ class Organization(Resource):
                 pages = int(np.search(inter).group())
                 r = requests.get(url)
                 if r.status_code == 443:
-                    return "Rate limit exceeded. Please make sure your token is valid. Otherwise, try again in an hour.", 443
+                    return {"message": "Rate limit exceeded. Please try again in an hour."}, 443
                 pulls = r.json()
                 num = (pages-1)*100+len(pulls)
             except KeyError:  # only one page of results
@@ -74,10 +74,11 @@ class Organization(Resource):
                     break
         if len(topFive) < 5:  # make sure orgs with 2-4 repositories are sorted
             topFive.sort(key=operator.itemgetter(1), reverse=True)
-        rstring = "Top 5 projects for %s :<br/>" % org
+        rdict = {"organization": org, "repositories": {}}
         for x, proj in enumerate(topFive):
-            rstring += "%s: %d pull request(s)<br/>" % (proj[0], proj[1])
-        return rstring, 200
+            rdict["repositories"][proj[0]] = proj[1]
+
+        return rdict, 200
 
 api.add_resource(Organization, "/org/<string:org>")
 
