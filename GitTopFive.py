@@ -1,7 +1,6 @@
 import requests
 import operator
 import re
-from tqdm import tqdm
 
 from flask import Flask
 from flask_restful import Api, Resource, reqparse
@@ -36,7 +35,7 @@ class Organization(Resource):
                 break
 
         topFive = []
-        for project in tqdm(rep):  # iterate through each project and count the pull requests
+        for project in rep:  # iterate through each project and count the pull requests
             name = project["name"]
             url = "https://api.github.com/repos/%s/%s/pulls?state=all&access_token=%s&per_page=100" % (org, name, token)
             num = 0
@@ -83,4 +82,4 @@ class Organization(Resource):
 
 api.add_resource(Organization, "/org/<string:org>")
 
-app.run(port=80, debug=True)
+app.run(port=80)
